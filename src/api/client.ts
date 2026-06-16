@@ -7,7 +7,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     headers: {
       'Content-Type': 'application/json',
       'X-Operator-Id': 'u-002',
-      'X-Operator-Name': '王芳',
+      'X-Operator-Name': encodeURIComponent('王芳'),
       ...(options.headers || {}),
     },
     ...options,

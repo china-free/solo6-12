@@ -7,9 +7,10 @@ const router = Router();
 const DEFAULT_OPERATOR = { id: 'u-002', name: '王芳' };
 
 function getOperator(req: any) {
+  const rawName = req.headers['x-operator-name'] as string || DEFAULT_OPERATOR.name;
   return {
     id: req.headers['x-operator-id'] as string || DEFAULT_OPERATOR.id,
-    name: req.headers['x-operator-name'] as string || DEFAULT_OPERATOR.name,
+    name: decodeURIComponent(rawName),
   };
 }
 

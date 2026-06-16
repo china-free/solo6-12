@@ -96,7 +96,7 @@ export function seedMockData(): void {
       const unresolvedCount = (tpl.status === 'passed' || tpl.status === 'archived') ? 0 : issueCount;
 
       insertTask.run(
-        taskId, tpl.title, '/mock-audio-' + (idx + 1) + '.mp3', tpl.duration, tpl.status, tpl.priority,
+        taskId, tpl.title, '/audio/mock-audio-' + (idx + 1) + '.wav', tpl.duration, tpl.status, tpl.priority,
         producer.id, producer.name,
         reviewer ? reviewer.id : null, reviewer ? reviewer.name : null,
         editor ? editor.id : null, editor ? editor.name : null,

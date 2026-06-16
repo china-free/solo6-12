@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 
+type SeekFn = ((time: number) => void) | null;
+
 interface PlayerState {
   isPlaying: boolean;
   currentTime: number;
@@ -10,6 +12,11 @@ interface PlayerState {
   selectedSegmentId: string | null;
   hoverTime: number | null;
   scrollOffset: number;
+  audioLoading: boolean;
+  audioError: string | null;
+  waveformData: Float32Array | null;
+
+  _seekFn: SeekFn;
 
   setPlaying: (p: boolean) => void;
   setCurrentTime: (t: number) => void;
@@ -22,6 +29,10 @@ interface PlayerState {
   selectSegment: (id: string | null) => void;
   setHoverTime: (t: number | null) => void;
   setScrollOffset: (o: number) => void;
+  setAudioLoading: (l: boolean) => void;
+  setAudioError: (e: string | null) => void;
+  setWaveformData: (d: Float32Array | null) => void;
+  registerSeekFn: (fn: SeekFn) => void;
   reset: () => void;
 }
 
@@ -35,6 +46,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   selectedSegmentId: null,
   hoverTime: null,
   scrollOffset: 0,
+  audioLoading: false,
+  audioError: null,
+  waveformData: null,
+  _seekFn: null,
 
   setPlaying: (p) => set({ isPlaying: p }),
   setCurrentTime: (t) => set({ currentTime: t }),
@@ -43,16 +58,26 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   setPlaybackRate: (r) => set({ playbackRate: Math.max(0.5, Math.min(2, r)) }),
   togglePlay: () => set({ isPlaying: !get().isPlaying }),
   seekTo: (t) => {
-    const d = get().duration;
-    set({ currentTime: Math.max(0, Math.min(d || t, t)) });
+    const fn = get()._seekFn;
+    if (fn) {
+      fn(t);
+    } else {
+      const d = get().duration;
+      set({ currentTime: Math.max(0, Math.min(d || t, t)) });
+    }
   },
   selectIssue: (id) => set({ selectedIssueId: id, selectedSegmentId: null }),
   selectSegment: (id) => set({ selectedSegmentId: id, selectedIssueId: null }),
   setHoverTime: (t) => set({ hoverTime: t }),
   setScrollOffset: (o) => set({ scrollOffset: o }),
+  setAudioLoading: (l) => set({ audioLoading: l }),
+  setAudioError: (e) => set({ audioError: e }),
+  setWaveformData: (d) => set({ waveformData: d }),
+  registerSeekFn: (fn) => set({ _seekFn: fn }),
   reset: () => set({
     isPlaying: false, currentTime: 0, duration: 0,
     playbackRate: 1, selectedIssueId: null,
     selectedSegmentId: null, hoverTime: null, scrollOffset: 0,
+    audioLoading: false, audioError: null, waveformData: null, _seekFn: null,
   }),
 }));

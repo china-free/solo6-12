@@ -1,9 +1,8 @@
 import { useEffect, useRef } from 'react';
 import type { Task, IssueMarker, AudioSegment } from '../../shared/types.js';
 import { usePlayerStore } from '../stores/playerStore.js';
-import { formatDuration } from '../utils/index.js';
+import { formatDuration, generateMockWaveform } from '../utils/index.js';
 import { ISSUE_TYPE_COLOR } from '../../shared/types.js';
-import { generateMockWaveform } from '../utils/index.js';
 
 interface WaveformDisplayProps {
   task: Task & { segments: AudioSegment[]; issues: IssueMarker[] };
@@ -12,44 +11,39 @@ interface WaveformDisplayProps {
 export default function WaveformDisplay({ task }: WaveformDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const waveformData = useRef<number[]>(generateMockWaveform(1200));
   const rafId = useRef<number>();
+  const fallbackWaveform = useRef<number[]>(generateMockWaveform(Math.max(600, Math.floor(task.duration * 3))));
 
   const {
     currentTime, duration, isPlaying,
     selectedIssueId, selectedSegmentId, hoverTime,
-    seekTo, setHoverTime, setPlaying,
+    waveformData, seekTo, setHoverTime, setPlaying,
   } = usePlayerStore();
 
   useEffect(() => {
-    waveformData.current = generateMockWaveform(Math.max(600, Math.floor(task.duration * 3)));
+    fallbackWaveform.current = generateMockWaveform(Math.max(600, Math.floor(task.duration * 3)));
   }, [task.id, task.duration]);
 
   useEffect(() => {
-    usePlayerStore.getState().setDuration(task.duration);
-    usePlayerStore.getState().setCurrentTime(0);
-  }, [task.id, task.duration]);
-
-  useEffect(() => {
-    let lastTick = performance.now();
-    function tick(now: number) {
-      const dt = (now - lastTick) / 1000;
-      lastTick = now;
-      if (isPlaying) {
-        const st = usePlayerStore.getState();
-        const rate = st.playbackRate;
-        const newT = Math.min(st.duration || task.duration, st.currentTime + dt * rate);
-        usePlayerStore.getState().setCurrentTime(newT);
-        if (newT >= (st.duration || task.duration)) {
-          usePlayerStore.getState().setPlaying(false);
-        }
-      }
+    let animId: number;
+    function loop() {
       draw();
-      rafId.current = requestAnimationFrame(tick);
+      animId = requestAnimationFrame(loop);
     }
-    rafId.current = requestAnimationFrame(tick);
-    return () => { if (rafId.current) cancelAnimationFrame(rafId.current); };
-  }, [isPlaying, task.duration]);
+    animId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(animId);
+  }, [task.id, waveformData, currentTime, duration, selectedIssueId, selectedSegmentId, hoverTime]);
+
+  function getWaveformBars(): number[] {
+    if (waveformData && waveformData.length > 0) {
+      const bars: number[] = [];
+      for (let i = 0; i < waveformData.length; i++) {
+        bars.push(waveformData[i]);
+      }
+      return bars;
+    }
+    return fallbackWaveform.current;
+  }
 
   function draw() {
     const canvas = canvasRef.current;
@@ -77,21 +71,15 @@ export default function WaveformDisplay({ task }: WaveformDisplayProps) {
     ctx.strokeStyle = 'rgba(71,85,105,0.18)';
     ctx.lineWidth = 1;
     for (let gx = 0; gx < W; gx += 48) {
-      ctx.beginPath();
-      ctx.moveTo(gx, 0); ctx.lineTo(gx, H); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, H); ctx.stroke();
     }
     for (let gy = 0; gy < H; gy += 24) {
-      ctx.beginPath();
-      ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke();
     }
     ctx.strokeStyle = 'rgba(71,85,105,0.35)';
-    ctx.beginPath();
-    ctx.moveTo(0, H / 2); ctx.lineTo(W, H / 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, H / 2); ctx.lineTo(W, H / 2); ctx.stroke();
 
     const dur = duration || task.duration || 1;
-    const data = waveformData.current;
-    const dataLen = data.length;
-    const barW = Math.max(1.5, W / dataLen);
     const mid = H / 2;
 
     task.segments.forEach(seg => {
@@ -105,11 +93,17 @@ export default function WaveformDisplay({ task }: WaveformDisplayProps) {
       ctx.fillText(seg.label, x1 + 6, 16);
     });
 
+    const data = getWaveformBars();
+    const dataLen = data.length;
+    const barW = Math.max(1.5, W / dataLen);
     const playX = (currentTime / dur) * W;
+
+    const isReal = waveformData && waveformData.length > 0;
     for (let i = 0; i < dataLen; i++) {
       const x = i * barW;
       if (x > W) break;
-      const v = data[i];
+      const rawV = data[i];
+      const v = isReal ? Math.max(0.02, Math.min(1, rawV * 4)) : rawV;
       const bh = v * (H - 20) * 0.85;
       const played = x < playX;
       const grad = ctx.createLinearGradient(0, mid - bh / 2, 0, mid + bh / 2);
@@ -135,14 +129,11 @@ export default function WaveformDisplay({ task }: WaveformDisplayProps) {
       ctx.strokeStyle = color;
       ctx.lineWidth = isSel ? 3 : 1.8;
       ctx.setLineDash(isSel ? [] : [4, 3]);
-      ctx.beginPath();
-      ctx.moveTo(ix, 8); ctx.lineTo(ix, H - 8); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(ix, 8); ctx.lineTo(ix, H - 8); ctx.stroke();
       ctx.setLineDash([]);
       ctx.fillStyle = color;
       const rh = isSel ? 10 : 7;
-      ctx.beginPath();
-      ctx.arc(ix, 10, rh / 2, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.beginPath(); ctx.arc(ix, 10, rh / 2, 0, Math.PI * 2); ctx.fill();
       if (isSel) {
         ctx.fillStyle = color;
         ctx.globalAlpha = 0.18;
@@ -157,29 +148,17 @@ export default function WaveformDisplay({ task }: WaveformDisplayProps) {
     ctx.lineWidth = 2;
     ctx.shadowColor = '#F59E0B';
     ctx.shadowBlur = 10;
-    ctx.beginPath();
-    ctx.moveTo(playX, 2); ctx.lineTo(playX, H - 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(playX, 2); ctx.lineTo(playX, H - 2); ctx.stroke();
     ctx.restore();
     ctx.fillStyle = '#F59E0B';
-    ctx.beginPath();
-    ctx.moveTo(playX - 6, 0);
-    ctx.lineTo(playX + 6, 0);
-    ctx.lineTo(playX, 8);
-    ctx.closePath();
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(playX - 6, H);
-    ctx.lineTo(playX + 6, H);
-    ctx.lineTo(playX, H - 8);
-    ctx.closePath();
-    ctx.fill();
+    ctx.beginPath(); ctx.moveTo(playX - 6, 0); ctx.lineTo(playX + 6, 0); ctx.lineTo(playX, 8); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(playX - 6, H); ctx.lineTo(playX + 6, H); ctx.lineTo(playX, H - 8); ctx.closePath(); ctx.fill();
 
     if (hoverTime !== null && hoverTime !== undefined) {
       const hx = (hoverTime / dur) * W;
       ctx.strokeStyle = 'rgba(255,255,255,0.35)';
       ctx.setLineDash([3, 3]);
-      ctx.beginPath();
-      ctx.moveTo(hx, 0); ctx.lineTo(hx, H); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(hx, 0); ctx.lineTo(hx, H); ctx.stroke();
       ctx.setLineDash([]);
       const label = formatDuration(hoverTime);
       ctx.font = 'bold 11px "Chakra Petch", monospace';
@@ -188,12 +167,22 @@ export default function WaveformDisplay({ task }: WaveformDisplayProps) {
       ctx.fillStyle = 'rgba(15,23,42,0.92)';
       ctx.strokeStyle = '#475569';
       ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.roundRect(lx, H - 26, tw, 20, 4);
-      ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.roundRect(lx, H - 26, tw, 20, 4); ctx.fill(); ctx.stroke();
       ctx.fillStyle = '#E2E8F0';
       ctx.textBaseline = 'middle';
       ctx.fillText(label, lx + 7, H - 16);
+    }
+
+    if (isReal) {
+      ctx.fillStyle = 'rgba(34,211,238,0.5)';
+      ctx.font = '9px "Chakra Petch", system-ui';
+      ctx.textBaseline = 'top';
+      ctx.fillText('◉ 真实音频波形', 8, H - 18);
+    } else {
+      ctx.fillStyle = 'rgba(148,163,184,0.4)';
+      ctx.font = '9px "Chakra Petch", system-ui';
+      ctx.textBaseline = 'top';
+      ctx.fillText('◉ 模拟波形 (音频加载中...)', 8, H - 18);
     }
   }
 
@@ -205,18 +194,15 @@ export default function WaveformDisplay({ task }: WaveformDisplayProps) {
   }
 
   function handleClick(e: React.MouseEvent) {
-    const t = getTimeFromClientX(e.clientX);
-    seekTo(t);
+    seekTo(getTimeFromClientX(e.clientX));
   }
 
   function handleMouseMove(e: React.MouseEvent) {
-    const t = getTimeFromClientX(e.clientX);
-    setHoverTime(t);
+    setHoverTime(getTimeFromClientX(e.clientX));
   }
 
   function handleDoubleClick(e: React.MouseEvent) {
-    const t = getTimeFromClientX(e.clientX);
-    seekTo(t);
+    seekTo(getTimeFromClientX(e.clientX));
     setPlaying(true);
   }
 
@@ -235,7 +221,7 @@ export default function WaveformDisplay({ task }: WaveformDisplayProps) {
         onDoubleClick={handleDoubleClick}
       />
       <div className="pointer-events-none absolute top-2 left-1/2 -translate-x-1/2 text-[10px] font-mono text-slate-400 tracking-wider">
-        ◉ 实时波形 / 双击播放 · 单击定位 · 问题点点击右栏详情
+        双击播放 · 单击定位 · 问题点点击右栏详情
       </div>
     </div>
   );

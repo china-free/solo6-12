@@ -37,7 +37,11 @@ export default function TaskList() {
   const [hoverMini, setHoverMini] = useState<Record<string, number[]>>({});
 
   function ensureWaveform(id: string) {
-    if (!hoverMini[id]) setHoverMini(h => ({ ...h, [id]: generateMockWaveform(120) }));
+    if (!hoverMini[id]) {
+      const wf = generateMockWaveform(120);
+      setHoverMini(h => ({ ...h, [id]: wf }));
+      return wf;
+    }
     return hoverMini[id];
   }
 

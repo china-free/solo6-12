@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, RefreshCw, Share2 } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Share2, Loader2 } from 'lucide-react';
 import StatsBar from '../components/StatsBar.js';
 import TaskList from '../components/TaskList.js';
 import WaveformDisplay from '../components/WaveformDisplay.js';
@@ -10,24 +10,59 @@ import IssuePanel from '../components/IssuePanel.js';
 import DetailPanel from '../components/DetailPanel.js';
 import { useTaskStore } from '../stores/taskStore.js';
 import { usePlayerStore } from '../stores/playerStore.js';
+import { useAudioPlayer } from '../hooks/useAudioPlayer.js';
 
 export default function Workbench() {
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
   const { currentTask, currentTaskId, fetchTaskDetail, fetchTasks, fetchUsers, loading } = useTaskStore();
   const resetPlayer = usePlayerStore(s => s.reset);
+  const registerSeekFn = usePlayerStore(s => s.registerSeekFn);
+  const setAudioLoading = usePlayerStore(s => s.setAudioLoading);
+  const setWaveformData = usePlayerStore(s => s.setWaveformData);
+  const audioLoading = usePlayerStore(s => s.audioLoading);
+  const audioError = usePlayerStore(s => s.audioError);
+  const setAudioError = usePlayerStore(s => s.setAudioError);
+
+  const audioUrl = currentTask?.audioUrl || null;
+  const { seekAudio, fetchWaveformData } = useAudioPlayer(audioUrl);
+
+  useEffect(() => {
+    registerSeekFn(seekAudio);
+    return () => registerSeekFn(null);
+  }, [seekAudio, registerSeekFn]);
 
   useEffect(() => {
     void fetchTasks();
     void fetchUsers();
   }, [fetchTasks, fetchUsers]);
 
+  const needLoad = taskId && (taskId !== currentTask?.id);
+
   useEffect(() => {
-    if (taskId && taskId !== currentTaskId) {
+    if (needLoad) {
       resetPlayer();
+      setWaveformData(null);
+      setAudioLoading(true);
+      setAudioError(null);
       void fetchTaskDetail(taskId);
     }
-  }, [taskId, currentTaskId, fetchTaskDetail, resetPlayer]);
+  }, [needLoad, taskId, fetchTaskDetail, resetPlayer, setWaveformData, setAudioLoading, setAudioError]);
+
+  useEffect(() => {
+    if (currentTask && audioUrl) {
+      setAudioLoading(true);
+      fetchWaveformData().then(waveform => {
+        if (waveform) {
+          setWaveformData(waveform);
+        }
+        setAudioLoading(false);
+      }).catch(() => {
+        setAudioLoading(false);
+        setAudioError('波形数据加载失败');
+      });
+    }
+  }, [currentTask?.id, audioUrl, fetchWaveformData, setWaveformData, setAudioLoading, setAudioError]);
 
   return (
     <div className="h-screen w-screen flex flex-col bg-slate-950 overflow-hidden">
@@ -83,8 +118,20 @@ export default function Workbench() {
                     <h2 className="text-lg font-bold text-white truncate leading-tight" style={{ fontFamily: '"Chakra Petch", system-ui, sans-serif' }}>
                       {currentTask.title}
                     </h2>
-                    <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-2">
+                    <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-3">
                       <span className="font-mono">任务ID: {currentTask.id}</span>
+                      {audioLoading && (
+                        <span className="flex items-center gap-1 text-cyan-400">
+                          <Loader2 size={11} className="animate-spin" />
+                          音频加载中
+                        </span>
+                      )}
+                      {audioError && (
+                        <span className="text-red-400 text-[10px]">{audioError}</span>
+                      )}
+                      {!audioLoading && !audioError && currentTask.audioUrl && (
+                        <span className="text-emerald-400/70 text-[10px]">● 音频就绪</span>
+                      )}
                     </div>
                   </div>
                 </div>
