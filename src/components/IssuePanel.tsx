@@ -3,7 +3,8 @@ import { Plus, AlertTriangle, Trash2, Edit3, Check, X, Clock, Target } from 'luc
 import type { Task, IssueMarker, IssueType, Severity } from '../../shared/types.js';
 import { ISSUE_TYPE_LABEL, ISSUE_TYPE_COLOR, SEVERITY_LABEL } from '../../shared/types.js';
 import { usePlayerStore } from '../stores/playerStore.js';
-import { useTaskStore } from '../stores/taskStore.js';
+import { useUiStore } from '../stores/uiStore.js';
+import { useTaskActions } from '../hooks/useTaskActions.js';
 import { formatDuration, cn } from '../utils/index.js';
 
 interface IssuePanelProps {
@@ -18,8 +19,9 @@ export default function IssuePanel({ task }: IssuePanelProps) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ timePoint: 0, type: 'stutter' as IssueType, severity: 'medium' as Severity, description: '' });
 
-  const { selectedIssueId, selectIssue, seekTo, setPlaying, currentTime } = usePlayerStore();
-  const { createIssue, updateIssue, deleteIssue } = useTaskStore();
+  const { seekTo, setPlaying, currentTime } = usePlayerStore();
+  const { selectedIssueId, selectIssue } = useUiStore();
+  const { createIssue, updateIssue, deleteIssue } = useTaskActions();
 
   const issues = [...task.issues].sort((a, b) => a.timePoint - b.timePoint);
 

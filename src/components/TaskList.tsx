@@ -4,6 +4,7 @@ import { Clock, AlertCircle, User, Calendar, CheckCircle2, AlertTriangle, Archiv
 import type { Task, TaskStatus, TaskQueryParams } from '../../shared/types.js';
 import { TASK_STATUS_LABEL } from '../../shared/types.js';
 import { useTaskStore } from '../stores/taskStore.js';
+import { useTaskDetailStore } from '../stores/taskDetailStore.js';
 import { formatDuration, formatDateTime, cn, generateMockWaveform } from '../utils/index.js';
 import { usePlayerStore } from '../stores/playerStore.js';
 
@@ -31,7 +32,8 @@ const statusIcons: Record<TaskStatus, any> = {
 };
 
 export default function TaskList() {
-  const { tasks, filters, setFilters, currentTaskId, setCurrentTaskId, loading } = useTaskStore();
+  const { tasks, filters, setFilters, loading } = useTaskStore();
+  const { currentTaskId, setCurrentTaskId } = useTaskDetailStore();
   const navigate = useNavigate();
   const resetPlayer = usePlayerStore(s => s.reset);
   const [hoverMini, setHoverMini] = useState<Record<string, number[]>>({});

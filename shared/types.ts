@@ -88,6 +88,7 @@ export interface StatsSummary {
   pending: number;
   reviewing: number;
   reworking: number;
+  resubmitted: number;
   passed: number;
   archived: number;
   totalIssues: number;

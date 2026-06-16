@@ -4,10 +4,12 @@ import { ArrowLeft, FolderClosed as ArchiveIcon, FileSearch } from 'lucide-react
 import StatsBar from '../components/StatsBar.js';
 import TaskList from '../components/TaskList.js';
 import { useTaskStore } from '../stores/taskStore.js';
+import { useUserStore } from '../stores/userStore.js';
 
 export default function Archive() {
   const navigate = useNavigate();
-  const { fetchTasks, fetchUsers, setFilters, filters } = useTaskStore();
+  const { fetchTasks, setFilters, filters } = useTaskStore();
+  const { fetchUsers } = useUserStore();
 
   useEffect(() => {
     void fetchUsers();

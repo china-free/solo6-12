@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Play, ChevronRight, FileText } from 'lucide-react';
 import type { Task, AudioSegment, IssueMarker } from '../../shared/types.js';
 import { usePlayerStore } from '../stores/playerStore.js';
+import { useUiStore } from '../stores/uiStore.js';
 import { formatDuration, cn } from '../utils/index.js';
 
 interface SegmentPanelProps {
@@ -10,7 +11,8 @@ interface SegmentPanelProps {
 
 export default function SegmentPanel({ task }: SegmentPanelProps) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const { selectedSegmentId, selectSegment, seekTo, setPlaying } = usePlayerStore();
+  const { seekTo, setPlaying } = usePlayerStore();
+  const { selectedSegmentId, selectSegment } = useUiStore();
 
   const segs = [...task.segments].sort((a, b) => a.startTime - b.startTime);
 

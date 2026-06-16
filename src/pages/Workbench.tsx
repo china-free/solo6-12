@@ -9,13 +9,17 @@ import SegmentPanel from '../components/SegmentPanel.js';
 import IssuePanel from '../components/IssuePanel.js';
 import DetailPanel from '../components/DetailPanel.js';
 import { useTaskStore } from '../stores/taskStore.js';
+import { useTaskDetailStore } from '../stores/taskDetailStore.js';
+import { useUserStore } from '../stores/userStore.js';
 import { usePlayerStore } from '../stores/playerStore.js';
 import { useAudioPlayer } from '../hooks/useAudioPlayer.js';
 
 export default function Workbench() {
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
-  const { currentTask, currentTaskId, fetchTaskDetail, fetchTasks, fetchUsers, loading } = useTaskStore();
+  const { currentTask, fetchTaskDetail, loading } = useTaskDetailStore();
+  const { fetchTasks, refreshAll } = useTaskStore();
+  const { fetchUsers } = useUserStore();
   const resetPlayer = usePlayerStore(s => s.reset);
   const registerSeekFn = usePlayerStore(s => s.registerSeekFn);
   const setAudioLoading = usePlayerStore(s => s.setAudioLoading);

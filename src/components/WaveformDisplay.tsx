@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { Task, IssueMarker, AudioSegment } from '../../shared/types.js';
 import { usePlayerStore } from '../stores/playerStore.js';
+import { useUiStore } from '../stores/uiStore.js';
 import { formatDuration, generateMockWaveform } from '../utils/index.js';
 import { ISSUE_TYPE_COLOR } from '../../shared/types.js';
 
@@ -14,11 +15,8 @@ export default function WaveformDisplay({ task }: WaveformDisplayProps) {
   const rafId = useRef<number>();
   const fallbackWaveform = useRef<number[]>(generateMockWaveform(Math.max(600, Math.floor(task.duration * 3))));
 
-  const {
-    currentTime, duration, isPlaying,
-    selectedIssueId, selectedSegmentId, hoverTime,
-    waveformData, seekTo, setHoverTime, setPlaying,
-  } = usePlayerStore();
+  const { currentTime, duration, isPlaying, waveformData, seekTo, setPlaying } = usePlayerStore();
+  const { selectedIssueId, selectedSegmentId, hoverTime, setHoverTime } = useUiStore();
 
   useEffect(() => {
     fallbackWaveform.current = generateMockWaveform(Math.max(600, Math.floor(task.duration * 3)));

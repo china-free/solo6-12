@@ -4,11 +4,15 @@ import { ArrowLeft, Workflow, ListChecks, FileArchive } from 'lucide-react';
 import StatsBar from '../components/StatsBar.js';
 import TaskList from '../components/TaskList.js';
 import { useTaskStore } from '../stores/taskStore.js';
+import { useTaskDetailStore } from '../stores/taskDetailStore.js';
+import { useUserStore } from '../stores/userStore.js';
 import { cn } from '../utils/index.js';
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { fetchTasks, fetchUsers, currentTaskId, tasks } = useTaskStore();
+  const { fetchTasks, tasks } = useTaskStore();
+  const { currentTaskId } = useTaskDetailStore();
+  const { fetchUsers } = useUserStore();
 
   useEffect(() => {
     void fetchTasks();

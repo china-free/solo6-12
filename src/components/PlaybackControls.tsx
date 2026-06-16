@@ -1,12 +1,12 @@
 import { Play, Pause, SkipBack, SkipForward, Volume2, Gauge, Repeat } from 'lucide-react';
 import { usePlayerStore } from '../stores/playerStore.js';
 import { formatDuration } from '../utils/index.js';
-import { useTaskStore } from '../stores/taskStore.js';
+import { useTaskDetailStore } from '../stores/taskDetailStore.js';
 import type { AudioSegment } from '../../shared/types.js';
 
 export default function PlaybackControls() {
   const { currentTime, duration, isPlaying, volume, playbackRate, togglePlay, seekTo, setVolume, setPlaybackRate } = usePlayerStore();
-  const task = useTaskStore(s => s.currentTask);
+  const task = useTaskDetailStore(s => s.currentTask);
 
   function jumpSeg(dir: -1 | 1) {
     if (!task) return;

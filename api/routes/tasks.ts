@@ -1,26 +1,10 @@
 import { Router } from 'express';
-import { TaskService, IssueService, StatsService, UserService, SegmentService, HistoryService } from '../services/Services.js';
+import { TaskService } from '../services/TaskService.js';
+import { SegmentService } from '../services/SegmentService.js';
+import { getOperator } from '../middleware/operator.js';
 import type { TaskQueryParams } from '../../shared/types.js';
 
 const router = Router();
-
-const DEFAULT_OPERATOR = { id: 'u-002', name: '王芳' };
-
-function getOperator(req: any) {
-  const rawName = req.headers['x-operator-name'] as string || DEFAULT_OPERATOR.name;
-  return {
-    id: req.headers['x-operator-id'] as string || DEFAULT_OPERATOR.id,
-    name: decodeURIComponent(rawName),
-  };
-}
-
-router.get('/stats/summary', (_req, res) => {
-  res.json(StatsService.getSummary());
-});
-
-router.get('/users', (_req, res) => {
-  res.json(UserService.listAll());
-});
 
 router.get('/tasks', (req, res) => {
   const params: TaskQueryParams = {};
@@ -56,29 +40,6 @@ router.patch('/tasks/:id', (req, res) => {
 
 router.get('/tasks/:id/segments', (req, res) => {
   res.json(SegmentService.listByTask(req.params.id));
-});
-
-router.get('/tasks/:id/issues', (req, res) => {
-  res.json(IssueService.listByTask(req.params.id));
-});
-
-router.post('/tasks/:id/issues', (req, res) => {
-  const op = getOperator(req);
-  const issue = IssueService.create(req.params.id, req.body, op.id, op.name);
-  if (!issue) return res.status(400).json({ error: 'Failed to create issue' });
-  res.status(201).json(issue);
-});
-
-router.put('/tasks/:id/issues/:issueId', (req, res) => {
-  const issue = IssueService.update(req.params.issueId, req.body);
-  if (!issue) return res.status(404).json({ error: 'Issue not found' });
-  res.json(issue);
-});
-
-router.delete('/tasks/:id/issues/:issueId', (req, res) => {
-  const ok = IssueService.delete(req.params.issueId);
-  if (!ok) return res.status(404).json({ error: 'Issue not found' });
-  res.json({ success: true });
 });
 
 router.post('/tasks/:id/assign', (req, res) => {
@@ -121,10 +82,6 @@ router.post('/tasks/:id/archive', (req, res) => {
   const task = TaskService.archiveTask(req.params.id, op.id, op.name);
   if (!task) return res.status(404).json({ error: 'Task not found' });
   res.json(task);
-});
-
-router.get('/tasks/:id/history', (req, res) => {
-  res.json(HistoryService.listByTask(req.params.id));
 });
 
 export default router;
